@@ -1,6 +1,13 @@
 # Prerequisites
 *.d
 
+#Pictures
+*.png
+*.jpg
+*.jpeg
+*.vscode
+
+
 # Object files
 *.o
 *.ko
