@@ -16,43 +16,53 @@ VipsImage* grayscale(VipsImage* img){
     return gray;
 }
 
-VipsImage* hsvTrans(VipsImage* img){
+VipsImage* invert(VipsImage* img){
 
-    VipsImage *scRGB;
+    VipsImage *scInverted;
 
-    if(vips_sRGB2scRGB(img, &scRGB, NULL))
-        vips_error_exit(NULL);
+    if( vips_invert(img, &scInverted, NULL ) )
+        vips_error_exit( NULL );
 
-
-    VipsImage *sRGB;
-    if(vips_scRGB2sRGB(scRGB,&sRGB, NULL))
-        vips_error_exit(NULL);
-
-    VipsImage* hsv;
-    if(vips_sRGB2HSV(sRGB, &hsv, NULL))
-        vips_error_exit(NULL);
-    return hsv; 
+    return scInverted; 
 }
 
-// VipsImage* gaussianblur(VipsImage* img){
+VipsImage* gaussianblur(VipsImage* img){
 
-// }
-    // VipsImage* canny(VipsIMage* img){
+    VipsImage *gauss;
+
+    if( vips_gaussblur( img, &gauss, 15.00, NULL ) )
+        vips_error_exit( NULL );
+
+    return gauss;
+}
+
+VipsImage* canny(VipsImage* img){
+
+    VipsImage *scCanny;
+
+    if( vips_gaussblur( img, &scCanny, 15.00, NULL) )
+        vips_error_exit( NULL );
+
+    return scCanny;
+
         
-    // }
+}
 
-
-
-/*
 VipsImage* sobel(VipsImage* img){
 
+    VipsImage *scSobel;
+
+    if( vips_gaussblur( img, &scSobel, 15.00, NULL) )
+        vips_error_exit( NULL );
+
+    return scSobel;
+
 }
-*/
 
 int main( int argc, char **argv )
 {
     VipsImage *in;
-    double mean;
+    //double mean;
     //VipsImage *out;
 
     if( VIPS_INIT( argv[0] ) )
@@ -81,22 +91,42 @@ int main( int argc, char **argv )
         vips_error_exit( NULL );
 
 
-    VipsImage* hsv = hsvTrans(in);
+    VipsImage* inverted = invert(in);
 
-    if( vips_image_write_to_file( hsv, "hsv.jpg", NULL ) )
+    if( vips_image_write_to_file(inverted, "inverted.jpg", NULL ) )
         vips_error_exit( NULL );
 
 
+    VipsImage* gaussblur = gaussianblur(in);
+
+    if( vips_image_write_to_file(gaussblur, "gaussblur.jpg", NULL ) )
+        vips_error_exit( NULL );
+
+
+    VipsImage* cannypic = canny(in);
+
+    if( vips_image_write_to_file(cannypic, "canny.jpg", NULL ) )
+        vips_error_exit( NULL );
+
+
+    VipsImage* sobelpic = sobel(in);
+
+    if( vips_image_write_to_file(sobelpic, "inverted.jpg", NULL ) )
+        vips_error_exit( NULL );
+
     
     
-    g_object_unref( in ); 
+    g_object_unref(in); 
 /*
     if( vips_image_write_to_file( out, argv[2], NULL ) )
         vips_error_exit( NULL );
 
     g_object_unref( out ); */
     g_object_unref(gray);
-    g_object_unref(hsv);
+    g_object_unref(inverted);
+    g_object_unref(gaussblur);
+    g_object_unref(cannypic);
+    g_object_unref(sobelpic);
 
     return( 0 );
 }
