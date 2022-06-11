@@ -28,6 +28,7 @@
 *.a
 *.la
 *.lo
+client
 
 # Shared objects (inc. Windows DLLs)
 *.dll
