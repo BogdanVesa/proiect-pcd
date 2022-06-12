@@ -11,36 +11,91 @@
 #define m 80
 #define PORT 5555
 #define SA struct sockaddr
-void func(int sockfd)
+
+
+void sendImg(int sockfd, int typeOperation)
 {
-	char buff[m];
-	int n;
+	printf("Send Type Of Operation\n");
+	//int typeOperation = 1;
+	send(sockfd, &typeOperation, sizeof(int), 0);
+
     printf("Getting Picture Size\n");
     FILE *picture;
     picture = fopen("index.png", "r");
-    int size;
+    int sizePic;
     fseek(picture, 0, SEEK_END);
-    size = ftell(picture);
+    sizePic = ftell(picture);
     fseek(picture, 0, SEEK_SET);
 
     //Send Picture Size
     printf("Sending Picture Size\n");
-    write(sockfd, &size, sizeof(size));
+    send(sockfd, &sizePic, sizeof(sizePic), 0);
+
 
     //Send Picture as Byte Array
     printf("Sending Picture as Byte Array\n");
-    char send_buffer[1024]; // no link between BUFSIZE and the file size
+    char send_buffer[100]; // no link between BUFSIZE and the file size
     int nb = fread(send_buffer, 1, sizeof(send_buffer), picture);
     while(!feof(picture)) {
-        write(sockfd, send_buffer, nb);
+        send(sockfd, send_buffer, nb, 0);
         nb = fread(send_buffer, 1, sizeof(send_buffer), picture);
     }
+
+    fclose(picture);
+	
 }
 
-int main()
+void receive(int sockfd){
+	sleep(10000);
+	int size;
+    recv(sockfd, &size, sizeof(int), 0);
+	printf("Reading Picture Byte Array\n");
+    char p_array[100];
+    FILE *image = fopen("client2/clientPicture.png", "w");
+    int nb2 = recv(sockfd, p_array, 100, 0);
+    while (nb2 > 0) {
+        fwrite(p_array, 1, nb2, image);
+        nb2 = recv(sockfd, p_array, 100, 0);
+    }
+	fclose(image);
+}
+
+
+int main(int argc, char *argv[])
 {
-	int sockfd, connfd;
+	int sockfd, connfd, nready;
 	struct sockaddr_in servaddr, cli;
+	fd_set rset;
+
+	if(argc <2){
+		perror("Insificient Arguments");
+		exit(1);
+	}
+
+
+	char *type = argv[1];
+	int tp;
+	if (strcmp(type, "gray") == 0) 
+		{
+			tp = 0;
+		} 
+		else if (strcmp(type, "inverted") == 0)
+		{
+			tp = 1;
+		}
+		else if (strcmp(type, "gaussian") == 0)
+		{
+			tp = 2;
+		}
+		else if (strcmp(type, "sobel") == 0)
+		{
+			tp = 3;
+		}
+		else
+		{
+			perror("Wrong Type of operation");
+			exit(2);
+		}
 
 	// socket create and verification
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -65,8 +120,9 @@ int main()
 	else
 		printf("connected to the server..\n");
 
-	// function for chat
-	func(sockfd);
+	
+	sendImg(sockfd, tp);
+	// receive(sockfd);
 
 	// close the socket
 	close(sockfd);
