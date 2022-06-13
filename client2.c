@@ -35,27 +35,35 @@ void sendImg(int sockfd, int typeOperation)
     //Send Picture as Byte Array
     printf("Sending Picture as Byte Array\n");
     char send_buffer[100]; // no link between BUFSIZE and the file size
-    int nb = fread(send_buffer, 1, sizeof(send_buffer), picture);
-    while(!feof(picture)) {
+	do{
+		usleep(10000);
+        int nb = fread(send_buffer, 1, sizeof(send_buffer), picture);
         send(sockfd, send_buffer, nb, 0);
-        nb = fread(send_buffer, 1, sizeof(send_buffer), picture);
-    }
+		printf("Send %d bytes\n",nb);
+	}while(!feof(picture));
 
     fclose(picture);
 	
 }
 
 void receive(int sockfd){
-	sleep(10000);
+	
 	int size;
-    recv(sockfd, &size, sizeof(int), 0);
+	while(recv(sockfd, &size, sizeof(int), 0)<=0){
+		printf("I am sleeping\n");
+		usleep(1000000);
+	}
+    
 	printf("Reading Picture Byte Array\n");
     char p_array[100];
     FILE *image = fopen("client2/clientPicture.png", "w");
-    int nb2 = recv(sockfd, p_array, 100, 0);
-    while (nb2 > 0) {
-        fwrite(p_array, 1, nb2, image);
-        nb2 = recv(sockfd, p_array, 100, 0);
+    while (size>0) {
+        int nb = recv(sockfd, p_array, 100, 0);
+        if(nb<0)
+            continue;
+        size= size-nb;
+        printf("I read %d bytes and %d size\n",nb, size);
+        fwrite(p_array, 1, nb, image);
     }
 	fclose(image);
 }
@@ -122,7 +130,8 @@ int main(int argc, char *argv[])
 
 	
 	sendImg(sockfd, tp);
-	// receive(sockfd);
+
+	receive(sockfd);
 
 	// close the socket
 	close(sockfd);

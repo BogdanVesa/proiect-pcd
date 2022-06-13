@@ -73,6 +73,7 @@ VipsImage* sobel(VipsImage* img){
 }
 void func(int connfd)
 {
+
     printf("readinf type of operation ");
     int type;
     recv(connfd, &type, sizeof(int),0);
@@ -86,16 +87,22 @@ void func(int connfd)
     printf("Reading Picture Byte Array\n");
     char p_array[100];
     FILE *image = fopen("c1.png", "w");
-    int nb = recv(connfd, p_array, 100, 0);
-    while (nb > 0) {
-        fwrite(p_array, 1, nb, image);
+    int nb;
+    while (size>0) {
         nb = recv(connfd, p_array, 100, 0);
+        usleep(100000);
+        if(nb<0)
+            continue;
+        size= size-nb;
+        printf("I read %d bytes and %d size\n",nb, size);
+        fwrite(p_array, 1, nb, image);
     }
 
     fclose(image);
 
     VipsImage *in;
 
+    printf("Image proccesing started\n");
     if( !(in = vips_image_new_from_file( "c1.png", NULL )) )
         vips_error_exit( NULL );
 
@@ -121,6 +128,8 @@ void func(int connfd)
     if( vips_image_write_to_file( out, "serverOut/image.png", NULL ) )
         vips_error_exit( NULL );
 
+    printf("Image proccesing endeed\n");
+
     g_object_unref( in );
     g_object_unref( out );
 
@@ -129,6 +138,7 @@ void func(int connfd)
 
 void sendImg(int connfd){
 
+    
     printf("Getting Picture Size\n");
     FILE *picture;
     picture = fopen("serverOut/image.png", "r");
@@ -143,11 +153,10 @@ void sendImg(int connfd){
 
     printf("Sending Picture as Byte Array\n");
     char send_buffer[100]; // no link between BUFSIZE and the file size
-    int nb2 = fread(send_buffer, 1, sizeof(send_buffer), picture);
-    while(!feof(picture)) {
-        send(connfd, send_buffer, nb2, 0);
-        nb2 = fread(send_buffer, 1, sizeof(send_buffer), picture);
-    }
+	do{
+        int nb = fread(send_buffer, 1, sizeof(send_buffer), picture);
+        send(connfd, send_buffer, nb, 0);
+	}while(!feof(picture));
 
     fclose(picture);
 
@@ -187,16 +196,16 @@ int main( int argc, char **argv )
 
     while (TRUE)
     {
-    // Now server is ready to listen and verification
-    if ((listen(sockfd, 50)) != 0) {
-        printf("Listen failed...\n");
-        exit(0);
-    }
-    else
-        printf("Server listening..\n");
-    len = sizeof(cli);
+        // Now server is ready to listen and verification
+        if ((listen(sockfd, 50)) != 0) {
+            printf("Listen failed...\n");
+            exit(0);
+        }
+        else
+            printf("Server listening..\n");
+        len = sizeof(cli);
 
-    FD_SET(sockfd, &rset);
+        FD_SET(sockfd, &rset);
 
 
         // Accept the data packet from client and verification
@@ -210,7 +219,7 @@ int main( int argc, char **argv )
 
         // Function for chatting between client and server
         func(connfd);
-        // sendImg(connfd);
+        sendImg(connfd);
         //close(sockfd);
     }
    
