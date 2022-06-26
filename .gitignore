@@ -28,7 +28,13 @@
 *.a
 *.la
 *.lo
+
+
 client
+admin
+testadmin
+testadmin.c
+echo_socket
 
 # Shared objects (inc. Windows DLLs)
 *.dll

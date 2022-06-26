@@ -13,7 +13,7 @@
 #define SA struct sockaddr
 
 
-void sendImg(int sockfd, int typeOperation)
+void sendImg(int sockfd, int typeOperation, char *filename)
 {
 	printf("Send Type Of Operation\n");
 	//int typeOperation = 1;
@@ -21,7 +21,7 @@ void sendImg(int sockfd, int typeOperation)
 
     printf("Getting Picture Size\n");
     FILE *picture;
-    picture = fopen("index.png", "r");
+    picture = fopen(filename, "r");
     int sizePic;
     fseek(picture, 0, SEEK_END);
     sizePic = ftell(picture);
@@ -36,33 +36,36 @@ void sendImg(int sockfd, int typeOperation)
     printf("Sending Picture as Byte Array\n");
     char send_buffer[100]; // no link between BUFSIZE and the file size
 	do{
-		usleep(10000);
         int nb = fread(send_buffer, 1, sizeof(send_buffer), picture);
         send(sockfd, send_buffer, nb, 0);
-		printf("Send %d bytes\n",nb);
 	}while(!feof(picture));
 
     fclose(picture);
 	
 }
 
-void receive(int sockfd){
+void receive(int sockfd, char *filename, char* type){
 	
 	int size;
+	strcat(type, filename);
+	printf("file name %s\n", type);
 	while(recv(sockfd, &size, sizeof(int), 0)<=0){
 		printf("I am sleeping\n");
-		usleep(1000000);
+		usleep(100);
 	}
+	char folder[255] = "client2/";
+	printf("folder namae %s\n", folder);
+	strcat(folder, type);
+	printf("folder %s\n", folder);
     
 	printf("Reading Picture Byte Array\n");
     char p_array[100];
-    FILE *image = fopen("client2/clientPicture.png", "w");
+    FILE *image = fopen(folder, "w");
     while (size>0) {
         int nb = recv(sockfd, p_array, 100, 0);
         if(nb<0)
             continue;
         size= size-nb;
-        printf("I read %d bytes and %d size\n",nb, size);
         fwrite(p_array, 1, nb, image);
     }
 	fclose(image);
@@ -73,9 +76,8 @@ int main(int argc, char *argv[])
 {
 	int sockfd, connfd, nready;
 	struct sockaddr_in servaddr, cli;
-	fd_set rset;
 
-	if(argc <2){
+	if(argc <3){
 		perror("Insificient Arguments");
 		exit(1);
 	}
@@ -104,6 +106,12 @@ int main(int argc, char *argv[])
 			perror("Wrong Type of operation");
 			exit(2);
 		}
+	
+	char *filename = argv[2];
+	if(access(filename, F_OK)==1){
+		perror("File does not exist");
+		exit(2);
+	}
 
 	// socket create and verification
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -129,9 +137,9 @@ int main(int argc, char *argv[])
 		printf("connected to the server..\n");
 
 	
-	sendImg(sockfd, tp);
+	sendImg(sockfd, tp, filename);
 
-	receive(sockfd);
+	receive(sockfd, filename,type);
 
 	// close the socket
 	close(sockfd);
